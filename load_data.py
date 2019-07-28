@@ -32,7 +32,8 @@ def timestamp2vec(timestamps):
     vec = []
     for t in timestamps:
         t = bytes.decode(t)
-        vec.append(time.strptime(t[:8], '%Y%m%d').tm_wday)
+        t = time.strptime(t[:8], '%Y%m%d')
+        vec.append(t.tm_wday)
     ret = []
     for i in vec:
         v = [0 for _ in range(7)]
@@ -131,7 +132,3 @@ def load_all_data():
         max_ = max(max_, ma)
 
     return np.asarray(data), np.asarray(extern), timestamp, min_, max_
-
-
-data, extern, time, min_, max_ = load_all_data()
-print(data.shape)

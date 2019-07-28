@@ -17,7 +17,10 @@ class Data_set(object):
     def build(self, input_data, extern_input):
         # _data: [None, 2, 32, 32]
         self._data = input_data.copy()
-        self._extern = extern_input.copy()
+        if extern_input != -1:
+            self._extern = extern_input.copy()
+        else:
+            self._extern = np.zeros([input_data.shape[0], 9])
         self._avaliable = (int(input_data.shape[0]*self._train_percent/48))*48
         self._global_pointer = self._distant + 4
 
