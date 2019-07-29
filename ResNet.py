@@ -19,8 +19,8 @@ def residual_unit(train, w, b):
 # input : [None, 4*2, 32, 32]
 # output: [None, 2, 32, 32]
 def residual_net_model(input_x, conv1_w, conv2_w, res_num, res_w, bias1, bias2, bias_res):
-    # reshape into [None, 32, 32, 4*2] for convolution
-    input_x = tf.reshape(input_x, [-1, 32, 32, 8])
+    # transpose into [None, 32, 32, 4*2] for convolution
+    input_x = tf.transpose(input_x, [0, 2, 3, 1])
     conv1 = tf.nn.conv2d(input=input_x, filter=conv1_w, strides=[1, 1, 1, 1], padding='SAME')
     conv1 = tf.nn.bias_add(conv1, bias1)
     conv1 = tf.nn.relu(conv1)
@@ -32,7 +32,7 @@ def residual_net_model(input_x, conv1_w, conv2_w, res_num, res_w, bias1, bias2, 
     conv2 = tf.nn.bias_add(conv2, bias2)
     conv2 = tf.nn.relu(conv2)
     # output: [None, 2, 32, 32]
-    return tf.reshape(conv2, [-1, 2, 32, 32])
+    return tf.transpose(conv2, [0, 3, 1, 2])
 
 
 # input: [None, 2, 32, 32]
@@ -70,7 +70,7 @@ def net_model(input_x, extern_input, num_steps, batch_size, max_x, min_x):
     bias1 = tf.Variable(tf.zeros([3, 64]))
     conv2_w = tf.Variable(tf.random_normal([3, 3, 3, 64, 2], stddev=0.01))
     bias2 = tf.Variable(tf.zeros([3, 2]))
-    residual_numer = 9
+    residual_numer = 4
     res_w = tf.Variable(tf.random_normal([3, residual_numer, 3, 3, 64, 64], stddev=0.01))
     res_bias = tf.Variable(tf.zeros([3, residual_numer, 64]))
     fusion_w = tf.Variable(tf.random_normal([3, 2, 32, 32], stddev=0.01))
@@ -89,10 +89,10 @@ def net_model(input_x, extern_input, num_steps, batch_size, max_x, min_x):
                                      res_w=res_w[2], res_num=residual_numer, bias1=bias1[2],
                                     bias2=bias2[2], bias_res=res_bias[2])
     total = three_fusion(recent_out, near_out, distant_out, fusion_w)
-    if extern_input != -1:
-        extern_out = fully_connected(E)
-    else:
+    if extern_input is None:
         extern_out = tf.constant(0.)
+    else:
+        extern_out = fully_connected(E)
     # prediction: [None, 2, 32, 32]
 
     prediction = tf.tanh(tf.add(total, extern_out))
@@ -100,7 +100,7 @@ def net_model(input_x, extern_input, num_steps, batch_size, max_x, min_x):
     # define loss and optimizer
     loss = tf.reduce_mean(tf.square(prediction - Y))
     eval_matrix = tf.sqrt(loss)*(max_x-min_x)
-    optimizer = tf.train.AdamOptimizer(learning_rate=0.001).minimize(loss)
+    optimizer = tf.train.AdamOptimizer(learning_rate=0.005).minimize(loss)
     init_op = tf.global_variables_initializer()
     print("========== Model built ==========")
 
@@ -131,4 +131,5 @@ def net_model(input_x, extern_input, num_steps, batch_size, max_x, min_x):
 
 
 data_input, extern, timestamp, min_data, max_data = load_data.load_all_data()
-net_model(input_x=data_input, extern_input=-1, num_steps=200, batch_size=128, max_x=max_data, min_x=min_data)
+net_model(input_x=data_input, extern_input=None, num_steps=105
+          , batch_size=128, max_x=max_data, min_x=min_data)
